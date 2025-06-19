@@ -15,4 +15,5 @@ java -jar Trivia-Game.jar
 ```
 
 The website is now running and can be approached by going to http://localhost:8080/ 
+
 You can shutdown the website by pressing 'Ctrl + C' in the terminal window
