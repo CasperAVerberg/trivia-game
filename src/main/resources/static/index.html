@@ -6,8 +6,12 @@
   <link rel="stylesheet" href="/css/style.css"/>
 </head>
 <body>
-
+  
   <h1>Trivia Game - Quad Solutions assignment</h1>
+  <div id="loading-indicator" class="loading-indicator hidden">
+    <div class="spinner"></div>
+    <p>Loading questions... Please wait. </p>
+  </div>
   <div id="questions"></div>
 
   <button id="submit-btn" onclick="submitAnswers()">Submit Answers</button>

@@ -12,20 +12,70 @@ import com.example.trivia.model.Question;
 public class TriviaService {
 
     private static final String OpenTriviaApiURL = "https://opentdb.com/api.php?amount=10";
+    private static final int MAX_RETRIES = 3;
+    private static final int RETRY_DELAY_MS = 5000;
 
     public List<Question> fetchQuestions() {
         RestTemplate restTemplate = new RestTemplate();
-        Map<String, Object> response = restTemplate.getForObject(OpenTriviaApiURL, Map.class);
-        List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
-        return results.stream().map(this::mapToQuestion).toList();
+
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                Map<String, Object> response = restTemplate.getForObject(OpenTriviaApiURL, Map.class);
+
+                if (response == null) {
+                    throw new RuntimeException("Null response from trivia API");
+                }
+
+                Integer responseCode = (Integer) response.get("response_code");
+
+                if (responseCode != null && responseCode == 5) {
+                    System.out.println("Rate limited by API (response_code 5), retrying in 5 seconds...");
+                    Thread.sleep(RETRY_DELAY_MS);
+                    continue;
+                }
+
+                if (responseCode != null && responseCode != 0) {
+                    throw new RuntimeException("Trivia API returned error code: " + responseCode);
+                }
+
+                Object resultsObj = response.get("results");
+                if (!(resultsObj instanceof List<?> rawResults)) {
+                    throw new RuntimeException("Unexpected format for results");
+                }
+
+                return rawResults.stream()
+                        .filter(item -> item instanceof Map)
+                        .map(item -> mapToQuestion((Map<String, Object>) item))
+                        .toList();
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // best practice
+                throw new RuntimeException("Interrupted while waiting to retry API call", e);
+            } catch (Exception e) {
+                if (attempt == MAX_RETRIES) {
+                    System.err.println("Max retries reached. Trivia API failed.");
+                    throw new RuntimeException("Trivia API fetch failed after retries", e);
+                }
+                System.err.println("Attempt " + attempt + " failed: " + e.getMessage());
+            }
+        }
+
+        throw new RuntimeException("Unreachable code: Trivia fetch failed");
     }
 
     private Question mapToQuestion(Map<String, Object> map) {
         Question question = new Question();
-        question.setQuestion((String) map.get("question"));
-        question.setCorrect_answer((String) map.get("correct_answer"));
-        List<String> incorrectsAnswers = (List<String>) map.get("incorrect_answers");
-        question.setIncorrect_answers(incorrectsAnswers.toArray(new String[0]));
+        question.setQuestion((String) map.getOrDefault("question", "No question"));
+        question.setCorrect_answer((String) map.getOrDefault("correct_answer", "N/A"));
+
+        Object incorrects = map.get("incorrect_answers");
+        if (incorrects instanceof List<?> list) {
+            question.setIncorrect_answers(list.toArray(new String[0]));
+        } else {
+            System.err.println("Invalid or missing incorrect_answers: " + map);
+            question.setIncorrect_answers(new String[0]);
+        }
+
         return question;
     }
 }
