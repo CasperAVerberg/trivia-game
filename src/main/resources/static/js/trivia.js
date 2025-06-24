@@ -1,5 +1,6 @@
 let questions = [];
 
+// shuffles the answers to avoid the correct answer from always being the same index
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -7,42 +8,22 @@ function shuffle(array) {
   }
 }
 
-async function fetchQuestionsWithRetry(retries = 3, delay = 5000) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const response = await fetch('/questions');
-      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-
-      const data = await response.json();
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error('No questions returned');
-      }
-
-      return data; // success!
-    } catch (err) {
-      console.warn(`Attempt ${attempt} failed: ${err.message}`);
-      if (attempt < retries) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } else {
-        throw new Error('Max retries reached');
-      }
-    }
-  }
-}
-
 async function loadQuestions() {
   const container = document.getElementById('questions');
   const loadingIndicator = document.getElementById('loading-indicator');
 
+  // Show loading indicator while fetching questions
   loadingIndicator.classList.remove('hidden');
-  container.innerHTML = ''; // clear previous questions or messages
+  container.innerHTML = ''; 
 
   try {
     questions = await fetchQuestionsWithRetry();
-
+    
+    // Hide loading indicator when questions have been fetched
     loadingIndicator.classList.add('hidden');
 
     questions.forEach((q, index) => {
+      // Create questions labels
       const div = document.createElement('div');
       div.className = 'question';
       div.innerHTML = `<p><strong>Question ${index + 1}:</strong> ${q.question}</p>`;
@@ -50,6 +31,7 @@ async function loadQuestions() {
       const options = [...q.options];
       shuffle(options);
 
+      // Create answer radio buttons
       options.forEach(answer => {
         const inputId = `q${q.id}-${answer}`;
         div.innerHTML += `
@@ -64,15 +46,41 @@ async function loadQuestions() {
     });
 
   } catch (error) {
-    spinner.classList.add('hidden');
+    loadingIndicator.classList.add('hidden');
     container.innerHTML = `<p style="color: red;">❌ Failed to load questions. Please try again later.</p>`;
     console.error(error.message);
+  }
+}
+
+// Fetch questions from Open Trivia API service
+async function fetchQuestionsWithRetry(retries = 3, delay = 5000) {
+  // Retry fetch questions up to 3 times if !reponse.ok
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch('/questions');
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error('No questions returned');
+      }
+
+      return data;
+    } catch (err) {
+      console.warn(`Attempt ${attempt} failed: ${err.message}`);
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw new Error('Max retries reached');
+      }
+    }
   }
 }
 
 async function submitAnswers() {
   const userAnswers = {};
 
+  // set user answers
   questions.forEach(q => {
     const selected = document.querySelector(`input[name="${q.id}"]:checked`);
     if (selected) {
@@ -80,16 +88,19 @@ async function submitAnswers() {
     }
   });
 
+  // Post backend api correct answers
   const response = await fetch('/checkanswers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userAnswers })
   });
 
+  // Set results
   const resultData = await response.json();
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = '';
 
+  // Compare user answers to correct answers
   questions.forEach((q, index) => {
     const isCorrect = resultData.results[q.id];
     const p = document.createElement('p');

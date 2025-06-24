@@ -15,29 +15,34 @@ public class TriviaService {
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 5000;
 
+    // Get Questions from Open Trivia API
     public List<Question> fetchQuestions() {
         RestTemplate restTemplate = new RestTemplate();
 
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
                 Map<String, Object> response = restTemplate.getForObject(OpenTriviaApiURL, Map.class);
-
+                
+                // Error handling if response is empty
                 if (response == null) {
                     throw new RuntimeException("Null response from trivia API");
                 }
 
                 Integer responseCode = (Integer) response.get("response_code");
-
+                
+                // Wait 5 seconds before retry'ing
                 if (responseCode != null && responseCode == 5) {
                     System.out.println("Rate limited by API (response_code 5), retrying in 5 seconds...");
                     Thread.sleep(RETRY_DELAY_MS);
                     continue;
                 }
-
+                
+                // Different response than Rate limited
                 if (responseCode != null && responseCode != 0) {
                     throw new RuntimeException("Trivia API returned error code: " + responseCode);
                 }
 
+                // Create results object
                 Object resultsObj = response.get("results");
                 if (!(resultsObj instanceof List<?> rawResults)) {
                     throw new RuntimeException("Unexpected format for results");
@@ -49,9 +54,9 @@ public class TriviaService {
                         .toList();
 
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // best practice
+                Thread.currentThread().interrupt(); 
                 throw new RuntimeException("Interrupted while waiting to retry API call", e);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 if (attempt == MAX_RETRIES) {
                     System.err.println("Max retries reached. Trivia API failed.");
                     throw new RuntimeException("Trivia API fetch failed after retries", e);
@@ -63,6 +68,7 @@ public class TriviaService {
         throw new RuntimeException("Unreachable code: Trivia fetch failed");
     }
 
+    // Encode the questions and answers
     private Question mapToQuestion(Map<String, Object> map) {
         Question question = new Question();
         question.setQuestion((String) map.getOrDefault("question", "No question"));
