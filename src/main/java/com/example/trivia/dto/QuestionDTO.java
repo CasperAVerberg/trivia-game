@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QuestionDTO {
-    private String id;              // Unique id for the question
-    private String question;        // Question text
-    private List<String> options;   // Shuffled list of all options
+    private String id;
+    private String question;
+    private List<String> options;
 }

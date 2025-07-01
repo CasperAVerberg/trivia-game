@@ -1,6 +1,6 @@
 let questions = [];
 
-// shuffles the answers to avoid the correct answer from always being the same index
+// shuffles the answers
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -18,8 +18,7 @@ async function loadQuestions() {
 
   try {
     questions = await fetchQuestionsWithRetry();
-    
-    // Hide loading indicator when questions have been fetched
+
     loadingIndicator.classList.add('hidden');
 
     questions.forEach((q, index) => {
@@ -54,7 +53,6 @@ async function loadQuestions() {
 
 // Fetch questions from Open Trivia API service
 async function fetchQuestionsWithRetry(retries = 3, delay = 5000) {
-  // Retry fetch questions up to 3 times if !reponse.ok
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const response = await fetch('/questions');
@@ -77,10 +75,10 @@ async function fetchQuestionsWithRetry(retries = 3, delay = 5000) {
   }
 }
 
+// Fetches userAnswers and compares them to the correct answers
 async function submitAnswers() {
   const userAnswers = {};
 
-  // set user answers
   questions.forEach(q => {
     const selected = document.querySelector(`input[name="${q.id}"]:checked`);
     if (selected) {
@@ -88,19 +86,16 @@ async function submitAnswers() {
     }
   });
 
-  // Post backend api correct answers
   const response = await fetch('/checkanswers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userAnswers })
   });
 
-  // Set results
   const resultData = await response.json();
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = '';
 
-  // Compare user answers to correct answers
   questions.forEach((q, index) => {
     const isCorrect = resultData.results[q.id];
     const p = document.createElement('p');

@@ -6,5 +6,5 @@ import lombok.Data;
 
 @Data
 public class CheckAnswersResponse {
-    private Map<String, Boolean> results; // questionId -> true/false
+    private Map<String, Boolean> results; 
 }

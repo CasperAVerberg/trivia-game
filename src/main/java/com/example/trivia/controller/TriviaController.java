@@ -31,7 +31,6 @@ public class TriviaController {
     public List<QuestionDTO> getQuestions(HttpSession session) {
         List<Question> questions = triviaService.fetchQuestions();
 
-        // Store questions (with answers) in session
         session.setAttribute("questions", questions);
 
         // Convert questions to QuestionDTOs without answers
@@ -51,13 +50,11 @@ public class TriviaController {
     // POST /checkanswers
     @PostMapping("/checkanswers")
     public CheckAnswersResponse checkAnswers(@RequestBody CheckAnswersRequest request, HttpSession session) {
-        // Retrieve questions from session
         List<Question> questions = (List<Question>) session.getAttribute("questions");
 
         Map<String, Boolean> results = new HashMap<>();
 
         if (questions == null) {
-            // No questions in session - error
             results.put("error", false);
         } else {
             Map<String, Question> questionMap = new HashMap<>();
